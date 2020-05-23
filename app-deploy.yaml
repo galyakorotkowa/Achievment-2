@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ns-05-deploy
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: ns-05-deploy
+  template:
+    metadata:
+      labels:
+        app: ns-05-deploy
+    spec:
+      containers:
+      - name: ns-05-deploy
+        image: ivannizh/incrementer:6.9
+        ports:
+        - containerPort: 5000
+        env:
+        - name: APP_PORT
+          value: "5000"
+        - name: DB_USER
+          value: "user"
+        - name: DB_PASS
+          value: "pass"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "rvs"
+        - name: DB_URL
+          value: "ns-05-dbServ"
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-05-deployDB
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-05-deployDB
+  template:
+    metadata:
+      labels:
+        app: node-05-deployDB
+    spec:
+      containers:
+      - name: node-05-deployDB
+        image: postgres
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "user"
+        - name: POSTGRES_PASSWORD
+          value: "pass"
+        - name: POSTGRES_DB
+          value: "rvs"
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ns-05-dbServ
+spec:
+#  type: LoadBalancer
+#  type: ClusterIP
+  ports:
+  - port: 5432
+  selector:
+    app: node-05-deployDB
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ns-05-LoadBalancer
+spec:
+#  type: LoadBalancer
+#  type: ClusterIP
+  ports:
+  - port: 5000
+  selector:
+    app: ns-05-deploy
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: node-05-ing
+spec:
+  rules:
+  - host: node-05.hse
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: ns-05-LoadBalancer
+          servicePort: 5000	
+
+
+
